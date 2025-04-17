@@ -1,5 +1,5 @@
 import pgzrun
-from random import randint
+from random import randint, choice, choices
 
 # Configurações da janela
 WIDTH = 800
@@ -30,6 +30,36 @@ time_counter = 0
 # Música
 music.set_volume(0.5)
 music.play("background_music")
+
+MAP_WIDTH = WIDTH // TILE_SIZE
+MAP_HEIGHT = HEIGHT // TILE_SIZE
+
+gamemap = []
+for y in range(MAP_HEIGHT):
+    row = []
+    for x in range(MAP_WIDTH):
+        if x == 0 or y == 0 or x == MAP_WIDTH - 1 or y == MAP_HEIGHT - 1:
+            row.append(1)  # Barreiras nas bordas
+        else:
+            row.append(choice([2, 3, 1 if randint(0, 10) < 2 else 2]))  # Chão e paredes aleatórias
+    gamemap.append(row)
+
+def draw_map():
+    """Desenha o mapa na tela."""
+    for y, row in enumerate(gamemap):
+        for x, tile in enumerate(row):
+            if tile == 1:
+                screen.blit("wall", (x * TILE_SIZE, y * TILE_SIZE))  # Tile de barreira
+            elif tile == 2:
+                screen.blit("floor1", (x * TILE_SIZE, y * TILE_SIZE))  # Primeiro tipo de chão
+            elif tile == 3:
+                screen.blit("floor2", (x * TILE_SIZE, y * TILE_SIZE))  # Segundo tipo de chão
+                
+def is_walkable(x, y):
+    """Verifica se uma posição no mapa é caminhável."""
+    if x < 0 or y < 0 or x >= MAP_WIDTH or y >= MAP_HEIGHT:
+        return False
+    return gamemap[y][x] != 1  # Não é caminhável se for uma barreira
 
 def reset_game():
     """Reinicia o estado do jogo."""
@@ -68,6 +98,7 @@ def draw_menu():
 
 def draw_game():
     screen.clear()
+    draw_map()  # Desenha o mapa
     hero.draw()
     for enemy in enemies:
         enemy.draw()
@@ -102,25 +133,24 @@ def update_hero():
     global hero_animation_counter
     moving = False
 
-    # Verifica se o herói está nas bordas da tela
-    at_top = hero.top <= 0
-    at_bottom = hero.bottom >= HEIGHT
-    at_left = hero.left <= 0
-    at_right = hero.right >= WIDTH
+    # Coordenadas do herói no mapa
+    hero_tile_x = int(hero.x // TILE_SIZE)
+    hero_tile_y = int(hero.y // TILE_SIZE)
 
-    if keyboard.up and not at_top:
+    # Verifica se o herói está nas bordas da tela
+    if keyboard.up and is_walkable(hero_tile_x, hero_tile_y - 1):
         hero.y -= hero.speed
         hero.direction = "up"
         moving = True
-    elif keyboard.down and not at_bottom:
+    elif keyboard.down and is_walkable(hero_tile_x, hero_tile_y + 1):
         hero.y += hero.speed
         hero.direction = "down"
         moving = True
-    elif keyboard.left and not at_left:
+    elif keyboard.left and is_walkable(hero_tile_x - 1, hero_tile_y):
         hero.x -= hero.speed
         hero.direction = "left"
         moving = True
-    elif keyboard.right and not at_right:
+    elif keyboard.right and is_walkable(hero_tile_x + 1, hero_tile_y):
         hero.x += hero.speed
         hero.direction = "right"
         moving = True
