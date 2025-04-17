@@ -1,16 +1,16 @@
 import pgzrun
-from random import randint, choice, choices
+from random import randint, choice
 
 # Configurações da janela
 WIDTH = 800
 HEIGHT = 600
+TILE_SIZE = 32
 
 # Estado do jogo
 game_state = "menu"
 music_on = True
 
-# Configurações do herói e inimigos
-TILE_SIZE = 32
+# Configurações do herói
 hero = Actor("hero_idle", (WIDTH // 2, HEIGHT // 2))
 hero.speed = 2
 hero.direction = "down"
@@ -18,6 +18,7 @@ hero.animation_frame = 0
 hero_animation_speed = 10
 hero_animation_counter = 0
 
+# Configurações dos inimigos
 enemies = []
 enemy_animation_speed = 15
 enemy_animation_counters = []
@@ -31,35 +32,26 @@ time_counter = 0
 music.set_volume(0.5)
 music.play("background_music")
 
+# Configuração do mapa
 MAP_WIDTH = WIDTH // TILE_SIZE
 MAP_HEIGHT = HEIGHT // TILE_SIZE
+gamemap = [[1 if x == 0 or y == 0 or x == MAP_WIDTH - 1 or y == MAP_HEIGHT - 1 else choice([2, 3]) for x in range(MAP_WIDTH)] for y in range(MAP_HEIGHT)]
 
-gamemap = []
-for y in range(MAP_HEIGHT):
-    row = []
-    for x in range(MAP_WIDTH):
-        if x == 0 or y == 0 or x == MAP_WIDTH - 1 or y == MAP_HEIGHT - 1:
-            row.append(1)  # Barreiras nas bordas
-        else:
-            row.append(choice([2, 3]))  # Apenas tipos de chão
-    gamemap.append(row)
-
+# Funções auxiliares
 def draw_map():
     """Desenha o mapa na tela."""
     for y, row in enumerate(gamemap):
         for x, tile in enumerate(row):
             if tile == 1:
-                screen.blit("wall", (x * TILE_SIZE, y * TILE_SIZE))  # Tile de barreira
+                screen.blit("wall", (x * TILE_SIZE, y * TILE_SIZE))
             elif tile == 2:
-                screen.blit("floor1", (x * TILE_SIZE, y * TILE_SIZE))  # Primeiro tipo de chão
+                screen.blit("floor1", (x * TILE_SIZE, y * TILE_SIZE))
             elif tile == 3:
-                screen.blit("floor2", (x * TILE_SIZE, y * TILE_SIZE))  # Segundo tipo de chão
-                
+                screen.blit("floor2", (x * TILE_SIZE, y * TILE_SIZE))
+
 def is_walkable(x, y):
     """Verifica se uma posição no mapa é caminhável."""
-    if x < 0 or y < 0 or x >= MAP_WIDTH or y >= MAP_HEIGHT:
-        return False
-    return gamemap[y][x] != 1  # Não é caminhável se for uma barreira
+    return 0 <= x < MAP_WIDTH and 0 <= y < MAP_HEIGHT and gamemap[y][x] != 1
 
 def reset_game():
     """Reinicia o estado do jogo."""
@@ -86,7 +78,93 @@ def reset_game():
     # Reinicia o sistema de pontos, tempo e velocidade
     score = 0
     time_counter = 0
-    enemy_speed_multiplier = 1  # Reinicia o multiplicador de velocidade
+    enemy_speed_multiplier = 1
+
+def calculate_enemy_direction(enemy):
+    """Calcula a direção para o inimigo se aproximar do herói."""
+    enemy_tile_x = int(enemy.x // TILE_SIZE)
+    enemy_tile_y = int(enemy.y // TILE_SIZE)
+    hero_tile_x = int(hero.x // TILE_SIZE)
+    hero_tile_y = int(hero.y // TILE_SIZE)
+
+    dx = dy = 0
+    if hero_tile_x < enemy_tile_x and is_walkable(enemy_tile_x - 1, enemy_tile_y):
+        dx = -1
+    elif hero_tile_x > enemy_tile_x and is_walkable(enemy_tile_x + 1, enemy_tile_y):
+        dx = 1
+    elif hero_tile_y < enemy_tile_y and is_walkable(enemy_tile_x, enemy_tile_y - 1):
+        dy = -1
+    elif hero_tile_y > enemy_tile_y and is_walkable(enemy_tile_x, enemy_tile_y + 1):
+        dy = 1
+
+    return dx, dy
+
+def update_animation(actor, moving, actor_type, index=None):
+    """Atualiza a animação de um ator (herói ou inimigo)."""
+    global enemy_animation_counters
+
+    if moving:
+        if actor_type == "hero":
+            global hero_animation_counter
+            hero_animation_counter += 1
+            if hero_animation_counter >= hero_animation_speed:
+                actor.animation_frame = (actor.animation_frame + 1) % 3
+                actor.image = f"{actor_type}_{actor.direction}_{actor.animation_frame}"
+                hero_animation_counter = 0
+        elif actor_type == "enemy":
+            enemy_animation_counters[index] += 1
+            if enemy_animation_counters[index] >= enemy_animation_speed:
+                actor.animation_frame = (actor.animation_frame + 1) % 3
+                actor.image = f"{actor_type}_{actor.direction}_{actor.animation_frame}"
+                enemy_animation_counters[index] = 0
+    else:
+        actor.image = f"{actor_type}_idle"
+
+def update_hero():
+    """Atualiza o movimento e animação do herói."""
+    moving = False
+    directions = {
+        "up": (keyboard.up or keyboard.w, 0, -1),
+        "down": (keyboard.down or keyboard.s, 0, 1),
+        "left": (keyboard.left or keyboard.a, -1, 0),
+        "right": (keyboard.right or keyboard.d, 1, 0),
+    }
+
+    for direction, (key_pressed, dx, dy) in directions.items():
+        if key_pressed:
+            hero_tile_x = int(hero.x // TILE_SIZE) + dx
+            hero_tile_y = int(hero.y // TILE_SIZE) + dy
+            if is_walkable(hero_tile_x, hero_tile_y):
+                hero.x += hero.speed * dx
+                hero.y += hero.speed * dy
+                hero.direction = direction
+                moving = True
+                break
+
+    update_animation(hero, moving, "hero")
+
+def update_enemies():
+    """Atualiza o movimento e animação dos inimigos."""
+    global enemy_speed_multiplier
+
+    for i, enemy in enumerate(enemies):
+        dx, dy = calculate_enemy_direction(enemy)
+        if dx or dy:
+            enemy.x += enemy.speed * enemy_speed_multiplier * dx
+            enemy.y += enemy.speed * enemy_speed_multiplier * dy
+            enemy.direction = "left" if dx < 0 else "right" if dx > 0 else "up" if dy < 0 else "down"
+
+        update_animation(enemy, True, "enemy", i)
+
+    if time_counter % (30 * 60) == 0:  # A cada 30 segundos
+        enemy_speed_multiplier += 0.1
+
+def check_collision():
+    """Verifica colisões entre o herói e os inimigos."""
+    global game_state
+    for enemy in enemies:
+        if hero.colliderect(enemy):
+            game_state = "game_over"
 
 def draw_menu():
     screen.clear()
@@ -128,85 +206,6 @@ def update_game():
     update_hero()
     update_enemies()
     check_collision()
-
-def update_hero():
-    global hero_animation_counter
-    moving = False
-
-    # Coordenadas do herói no mapa
-    hero_tile_x = int(hero.x // TILE_SIZE)
-    hero_tile_y = int(hero.y // TILE_SIZE)
-
-    # Verifica se o herói está nas bordas da tela
-    if (keyboard.up or keyboard.w) and is_walkable(hero_tile_x, hero_tile_y - 1):
-        hero.y -= hero.speed
-        hero.direction = "up"
-        moving = True
-    elif (keyboard.down or keyboard.s) and is_walkable(hero_tile_x, hero_tile_y + 1):
-        hero.y += hero.speed
-        hero.direction = "down"
-        moving = True
-    elif (keyboard.left or keyboard.a) and is_walkable(hero_tile_x - 1, hero_tile_y):
-        hero.x -= hero.speed
-        hero.direction = "left"
-        moving = True
-    elif (keyboard.right or keyboard.d) and is_walkable(hero_tile_x + 1, hero_tile_y):
-        hero.x += hero.speed
-        hero.direction = "right"
-        moving = True
-
-    # Atualiza a animação do herói
-    if moving:
-        hero_animation_counter += 1
-        if hero_animation_counter >= hero_animation_speed:
-            hero.animation_frame = (hero.animation_frame + 1) % 3  # Corrigido aqui
-            hero.image = f"hero_{hero.direction}_{hero.animation_frame}"
-            hero_animation_counter = 0
-    else:
-        hero.image = "hero_idle"
-
-def update_enemies():
-    global enemy_animation_counters, enemy_speed_multiplier
-
-    for i, enemy in enumerate(enemies):
-        # Coordenadas do inimigo no mapa
-        enemy_tile_x = int(enemy.x // TILE_SIZE)
-        enemy_tile_y = int(enemy.y // TILE_SIZE)
-
-        # Coordenadas do herói no mapa
-        hero_tile_x = int(hero.x // TILE_SIZE)
-        hero_tile_y = int(hero.y // TILE_SIZE)
-
-        # Calcula a direção para se aproximar do herói
-        if hero_tile_x < enemy_tile_x and is_walkable(enemy_tile_x - 1, enemy_tile_y):
-            enemy.x -= enemy.speed * enemy_speed_multiplier
-            enemy.direction = "left"
-        elif hero_tile_x > enemy_tile_x and is_walkable(enemy_tile_x + 1, enemy_tile_y):
-            enemy.x += enemy.speed * enemy_speed_multiplier
-            enemy.direction = "right"
-        elif hero_tile_y < enemy_tile_y and is_walkable(enemy_tile_x, enemy_tile_y - 1):
-            enemy.y -= enemy.speed * enemy_speed_multiplier
-            enemy.direction = "up"
-        elif hero_tile_y > enemy_tile_y and is_walkable(enemy_tile_x, enemy_tile_y + 1):
-            enemy.y += enemy.speed * enemy_speed_multiplier
-            enemy.direction = "down"
-
-        # Atualiza a animação do inimigo
-        enemy_animation_counters[i] += 1
-        if enemy_animation_counters[i] >= enemy_animation_speed:
-            enemy.animation_frame = (enemy.animation_frame + 1) % 3
-            enemy.image = f"enemy_{enemy.direction}_{enemy.animation_frame}"
-            enemy_animation_counters[i] = 0
-
-    # Aumenta a velocidade dos inimigos de forma mais gradual
-    if time_counter % (30 * 60) == 0:  # A cada 30 segundos
-        enemy_speed_multiplier += 0.1  # Incrementa a velocidade gradualmente
-        
-def check_collision():
-    global game_state
-    for enemy in enemies:
-        if hero.colliderect(enemy):
-            game_state = "game_over"
 
 def on_key_down(key):
     global game_state, music_on
