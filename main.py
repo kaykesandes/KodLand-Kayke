@@ -41,7 +41,7 @@ for y in range(MAP_HEIGHT):
         if x == 0 or y == 0 or x == MAP_WIDTH - 1 or y == MAP_HEIGHT - 1:
             row.append(1)  # Barreiras nas bordas
         else:
-            row.append(choice([2, 3, 1 if randint(0, 10) < 2 else 2]))  # Chão e paredes aleatórias
+            row.append(choice([2, 3]))  # Apenas tipos de chão
     gamemap.append(row)
 
 def draw_map():
@@ -138,19 +138,19 @@ def update_hero():
     hero_tile_y = int(hero.y // TILE_SIZE)
 
     # Verifica se o herói está nas bordas da tela
-    if keyboard.up and is_walkable(hero_tile_x, hero_tile_y - 1):
+    if (keyboard.up or keyboard.w) and is_walkable(hero_tile_x, hero_tile_y - 1):
         hero.y -= hero.speed
         hero.direction = "up"
         moving = True
-    elif keyboard.down and is_walkable(hero_tile_x, hero_tile_y + 1):
+    elif (keyboard.down or keyboard.s) and is_walkable(hero_tile_x, hero_tile_y + 1):
         hero.y += hero.speed
         hero.direction = "down"
         moving = True
-    elif keyboard.left and is_walkable(hero_tile_x - 1, hero_tile_y):
+    elif (keyboard.left or keyboard.a) and is_walkable(hero_tile_x - 1, hero_tile_y):
         hero.x -= hero.speed
         hero.direction = "left"
         moving = True
-    elif keyboard.right and is_walkable(hero_tile_x + 1, hero_tile_y):
+    elif (keyboard.right or keyboard.d) and is_walkable(hero_tile_x + 1, hero_tile_y):
         hero.x += hero.speed
         hero.direction = "right"
         moving = True
@@ -159,37 +159,37 @@ def update_hero():
     if moving:
         hero_animation_counter += 1
         if hero_animation_counter >= hero_animation_speed:
-            hero.animation_frame = (hero.animation_frame + 1) % 3
+            hero.animation_frame = (hero.animation_frame + 1) % 3  # Corrigido aqui
             hero.image = f"hero_{hero.direction}_{hero.animation_frame}"
             hero_animation_counter = 0
     else:
         hero.image = "hero_idle"
 
 def update_enemies():
-    global enemy_animation_counters, enemy_speed_multiplier, time_counter
-
-    # Aumenta a velocidade dos inimigos a cada 20 segundos
-    if time_counter % (20 * 60) == 0:  # 20 segundos (60 frames por segundo)
-        enemy_speed_multiplier *= 2  # Dobra a velocidade
+    global enemy_animation_counters, enemy_speed_multiplier
 
     for i, enemy in enumerate(enemies):
-        # Movimenta o inimigo na direção atual com o multiplicador de velocidade
-        if enemy.direction == "left":
+        # Coordenadas do inimigo no mapa
+        enemy_tile_x = int(enemy.x // TILE_SIZE)
+        enemy_tile_y = int(enemy.y // TILE_SIZE)
+
+        # Coordenadas do herói no mapa
+        hero_tile_x = int(hero.x // TILE_SIZE)
+        hero_tile_y = int(hero.y // TILE_SIZE)
+
+        # Calcula a direção para se aproximar do herói
+        if hero_tile_x < enemy_tile_x and is_walkable(enemy_tile_x - 1, enemy_tile_y):
             enemy.x -= enemy.speed * enemy_speed_multiplier
-            if enemy.x < 0:
-                enemy.direction = "right"
-        elif enemy.direction == "right":
+            enemy.direction = "left"
+        elif hero_tile_x > enemy_tile_x and is_walkable(enemy_tile_x + 1, enemy_tile_y):
             enemy.x += enemy.speed * enemy_speed_multiplier
-            if enemy.x > WIDTH:
-                enemy.direction = "left"
-        elif enemy.direction == "up":
+            enemy.direction = "right"
+        elif hero_tile_y < enemy_tile_y and is_walkable(enemy_tile_x, enemy_tile_y - 1):
             enemy.y -= enemy.speed * enemy_speed_multiplier
-            if enemy.y < 0:
-                enemy.direction = "down"
-        elif enemy.direction == "down":
+            enemy.direction = "up"
+        elif hero_tile_y > enemy_tile_y and is_walkable(enemy_tile_x, enemy_tile_y + 1):
             enemy.y += enemy.speed * enemy_speed_multiplier
-            if enemy.y > HEIGHT:
-                enemy.direction = "up"
+            enemy.direction = "down"
 
         # Atualiza a animação do inimigo
         enemy_animation_counters[i] += 1
@@ -198,18 +198,10 @@ def update_enemies():
             enemy.image = f"enemy_{enemy.direction}_{enemy.animation_frame}"
             enemy_animation_counters[i] = 0
 
-        # Altera a direção aleatoriamente em intervalos regulares
-        if randint(0, 100) < 2:  # 2% de chance de mudar de direção
-            enemy.direction = randint(0, 3)
-            if enemy.direction == 0:
-                enemy.direction = "left"
-            elif enemy.direction == 1:
-                enemy.direction = "right"
-            elif enemy.direction == 2:
-                enemy.direction = "up"
-            elif enemy.direction == 3:
-                enemy.direction = "down"
-
+    # Aumenta a velocidade dos inimigos de forma mais gradual
+    if time_counter % (30 * 60) == 0:  # A cada 30 segundos
+        enemy_speed_multiplier += 0.1  # Incrementa a velocidade gradualmente
+        
 def check_collision():
     global game_state
     for enemy in enemies:
