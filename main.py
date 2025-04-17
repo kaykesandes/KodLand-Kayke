@@ -32,6 +32,15 @@ time_counter = 0
 music.set_volume(0.5)
 music.play("background_music")
 
+# Variáveis do slider de volume
+slider_x = WIDTH // 2  # Posição inicial do slider
+slider_y = HEIGHT // 2 + 150  # Posição vertical do slider
+slider_width = 200  # Largura do slider
+slider_height = 10  # Altura do slider
+slider_handle_x = slider_x  # Posição inicial do "handle" do slider
+slider_handle_radius = 10  # Tamanho do "handle"
+volume = 0.5  # Volume inicial
+
 # Configuração do mapa
 MAP_WIDTH = WIDTH // TILE_SIZE
 MAP_HEIGHT = HEIGHT // TILE_SIZE
@@ -52,6 +61,33 @@ def draw_map():
 def is_walkable(x, y):
     """Verifica se uma posição no mapa é caminhável."""
     return 0 <= x < MAP_WIDTH and 0 <= y < MAP_HEIGHT and gamemap[y][x] != 1
+
+
+def on_mouse_down(pos):
+    """Detecta cliques no slider (apenas no menu)."""
+    global slider_handle_x, volume
+    if game_state != "menu":
+        return  # Ignora cliques fora do menu
+    if (slider_handle_x - slider_handle_radius <= pos[0] <= slider_handle_x + slider_handle_radius and
+            slider_y <= pos[1] <= slider_y + slider_height):
+        slider_handle_x = pos[0]
+        update_volume()
+
+def on_mouse_move(pos, buttons):
+    """Permite arrastar o slider (apenas no menu)."""
+    global slider_handle_x, volume
+    if game_state != "menu":
+        return  # Ignora movimentos fora do menu
+    if 1 in buttons:  # Verifica se o botão esquerdo do mouse está pressionado
+        if slider_x - slider_width // 2 <= pos[0] <= slider_x + slider_width // 2:
+            slider_handle_x = pos[0]
+            update_volume()
+
+def update_volume():
+    """Atualiza o volume com base na posição do slider."""
+    global volume
+    volume = (slider_handle_x - (slider_x - slider_width // 2)) / slider_width
+    music.set_volume(volume)
 
 def reset_game():
     """Reinicia o estado do jogo."""
@@ -167,12 +203,17 @@ def check_collision():
             game_state = "game_over"
 
 def draw_menu():
+    """Desenha o menu principal."""
     screen.clear()
     screen.draw.text("JOGO KODLAND - Kayke Sandes", center=(WIDTH // 2, HEIGHT // 2 - 100), fontsize=60, color="white")
     screen.draw.text("Press ENTER to Start", center=(WIDTH // 2, HEIGHT // 2), fontsize=40, color="white")
-    screen.draw.text(f"Music(M): {'On' if music_on else 'Off'}", center=(WIDTH // 2, HEIGHT // 2 + 100), fontsize=40, color="white")
     screen.draw.text("Press ESC to Exit", center=(WIDTH // 2, HEIGHT // 2 + 200), fontsize=30, color="white")
-    screen.draw.text("Meu primeiro projeto com pgzero, pygame. Peço que considere isso <3", center=(WIDTH // 2, HEIGHT // 2 +250), fontsize=25, color="white")
+    screen.draw.text("Meu primeiro projeto com pgzero, pygame. Peço que considere isso <3", center=(WIDTH // 2, HEIGHT // 2 + 250), fontsize=25, color="white")
+
+    # Desenha o slider de volume
+    screen.draw.filled_rect(Rect((slider_x - slider_width // 2, slider_y), (slider_width, slider_height)), "gray")
+    screen.draw.filled_circle((slider_handle_x, slider_y + slider_height // 2), slider_handle_radius, "white")
+    screen.draw.text(f"Volume: {int(volume * 100)}%", center=(WIDTH // 2, slider_y - 20), fontsize=30, color="white")
 
 def draw_game():
     screen.clear()
