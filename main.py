@@ -29,7 +29,7 @@ score = 0
 time_counter = 0
 
 # Música
-music.set_volume(0.5)
+music.set_volume(0.2)
 music.play("background_music")
 
 # Variáveis do slider de volume
@@ -39,7 +39,7 @@ slider_width = 200  # Largura do slider
 slider_height = 10  # Altura do slider
 slider_handle_x = slider_x  # Posição inicial do "handle" do slider
 slider_handle_radius = 10  # Tamanho do "handle"
-volume = 0.5  # Volume inicial
+volume = 0.2  # Volume inicial
 
 # Configuração do mapa
 MAP_WIDTH = WIDTH // TILE_SIZE
@@ -88,6 +88,7 @@ def update_volume():
     global volume
     volume = (slider_handle_x - (slider_x - slider_width // 2)) / slider_width
     music.set_volume(volume)
+
 
 def reset_game():
     """Reinicia o estado do jogo."""
@@ -205,15 +206,28 @@ def check_collision():
 def draw_menu():
     """Desenha o menu principal."""
     screen.clear()
-    screen.draw.text("JOGO KODLAND - Kayke Sandes", center=(WIDTH // 2, HEIGHT // 2 - 100), fontsize=60, color="white")
-    screen.draw.text("Press ENTER to Start", center=(WIDTH // 2, HEIGHT // 2), fontsize=40, color="white")
-    screen.draw.text("Press ESC to Exit", center=(WIDTH // 2, HEIGHT // 2 + 200), fontsize=30, color="white")
-    screen.draw.text("Meu primeiro projeto com pgzero, pygame. Peço que considere isso <3", center=(WIDTH // 2, HEIGHT // 2 + 250), fontsize=25, color="white")
+    title_spacing = 150  # Espaçamento do título
+    button_spacing = 80  # Espaçamento entre os botões
+    slider_spacing = 50  # Espaçamento entre o slider e o botão "Exit"
 
-    # Desenha o slider de volume
+    # Título do jogo
+    screen.draw.text("JOGO KODLAND - Kayke Sandes", center=(WIDTH // 2, HEIGHT // 2 - title_spacing), fontsize=60, color="white")
+
+    # Botão "Start Game"
+    start_game_y = HEIGHT // 2 - button_spacing
+    screen.draw.filled_rect(Rect((WIDTH // 2 - 100, start_game_y), (200, 40)), "gray")
+    screen.draw.text("Start Game", center=(WIDTH // 2, start_game_y + 20), fontsize=30, color="white")
+
+    # Slider de volume
+    slider_y = HEIGHT // 2
     screen.draw.filled_rect(Rect((slider_x - slider_width // 2, slider_y), (slider_width, slider_height)), "gray")
     screen.draw.filled_circle((slider_handle_x, slider_y + slider_height // 2), slider_handle_radius, "white")
     screen.draw.text(f"Volume: {int(volume * 100)}%", center=(WIDTH // 2, slider_y - 20), fontsize=30, color="white")
+
+    # Botão "Exit"
+    exit_y = slider_y + slider_spacing + 40
+    screen.draw.filled_rect(Rect((WIDTH // 2 - 100, exit_y), (200, 40)), "gray")
+    screen.draw.text("Exit", center=(WIDTH // 2, exit_y + 20), fontsize=30, color="white")
 
 def draw_game():
     screen.clear()
