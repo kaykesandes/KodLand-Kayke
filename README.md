@@ -94,4 +94,4 @@ O jogo possui três estados principais:
 
 ## 📝 Créditos
 
-Este jogo foi desenvolvido como parte de um projeto de aprendizado com **Pygame Zero**. Agradecimentos especiais à **Kodland** e ao desenvolvedor **Kayke Sandes**.
+Este jogo foi desenvolvido como parte de um projeto de aprendizado com **Pygame Zero**. Agradecimentos especiais à **Kodland** e ao desenvolvedor **Kayke Sandes**
